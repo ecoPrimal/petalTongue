@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use super::DiscoveryServiceClient;
-use super::protocol::{JsonRpcError, JsonRpcResponse};
+use super::protocol::JsonRpcResponse;
+use cellmembrane_types::JsonRpcError;
 use petal_tongue_core::types::PrimalHealthStatus;
 use serde_json::json;
 use std::path::PathBuf;

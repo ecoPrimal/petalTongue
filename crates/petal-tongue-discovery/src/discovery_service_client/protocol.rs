@@ -3,7 +3,7 @@
 //!
 //! JSON-RPC 2.0 types come from `cellmembrane-types` (canonical source).
 
-pub(super) use cellmembrane_types::{JsonRpcError, JsonRpcResponse};
+pub(super) use cellmembrane_types::JsonRpcResponse;
 use crate::errors::{DiscoveryError, DiscoveryResult};
 use petal_tongue_core::transport::{TransportEndpoint, connect_transport};
 use serde_json::Value;
