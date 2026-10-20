@@ -187,16 +187,15 @@ impl DiscoveryBackend for BiomeOsBackend {
     async fn query(&self, query: &CapabilityQuery) -> Result<Vec<PrimalEndpoint>, DiscoveryError> {
         let query = query.clone();
         let client = self.client.clone();
-        let request = JsonRpcRequest {
-            jsonrpc: "2.0".to_owned(),
-            method: "discovery.query_capability".to_owned(),
-            params: serde_json::json!({
+        let request = JsonRpcRequest::new(
+            "discovery.query_capability",
+            Some(serde_json::json!({
                 "domain": query.domain,
                 "operation": query.operation,
                 "version_req": query.version_req,
-            }),
-            id: 1,
-        };
+            })),
+            1,
+        );
 
         let response = client
             .call(&request)

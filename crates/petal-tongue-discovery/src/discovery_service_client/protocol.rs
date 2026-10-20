@@ -1,31 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! JSON-RPC wire protocol: request/response framing and socket I/O.
+//!
+//! JSON-RPC 2.0 types come from `cellmembrane-types` (canonical source).
 
+pub(super) use cellmembrane_types::{JsonRpcError, JsonRpcResponse};
 use crate::errors::{DiscoveryError, DiscoveryResult};
 use petal_tongue_core::transport::{TransportEndpoint, connect_transport};
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
 use super::DiscoveryServiceClient;
-
-/// JSON-RPC 2.0 error
-#[derive(Debug, Deserialize, Serialize)]
-pub(super) struct JsonRpcError {
-    pub(super) code: i32,
-    pub(super) message: String,
-}
-
-/// JSON-RPC 2.0 response
-#[derive(Debug, Deserialize, Serialize)]
-pub(super) struct JsonRpcResponse {
-    pub(super) jsonrpc: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) result: Option<Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) error: Option<JsonRpcError>,
-    pub(super) id: Value,
-}
 
 impl DiscoveryServiceClient {
     /// Send JSON-RPC request to the discovery service

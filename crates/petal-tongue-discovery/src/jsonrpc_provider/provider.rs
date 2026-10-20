@@ -119,12 +119,7 @@ impl JsonRpcProvider {
     ) -> DiscoveryResult<serde_json::Value> {
         let id = self.request_id.fetch_add(1, Ordering::SeqCst);
 
-        let request = JsonRpcRequest {
-            jsonrpc: "2.0".to_owned(),
-            method: method.to_string(),
-            params,
-            id,
-        };
+        let request = JsonRpcRequest::new(method, params, id);
 
         debug!("→ JSON-RPC request: {} (id={})", method, id);
 
@@ -168,10 +163,10 @@ impl JsonRpcProvider {
                 message: e.to_string(),
             })?;
 
-        if response.id != id {
+        if response.id != serde_json::json!(id) {
             return Err(DiscoveryError::RequestIdMismatch {
                 expected: id,
-                actual: serde_json::to_value(response.id).unwrap_or(serde_json::Value::Null),
+                actual: response.id,
             });
         }
 

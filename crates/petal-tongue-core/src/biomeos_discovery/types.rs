@@ -1,35 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Wire formats and [`BiomeOSDiscoveryEvent`].
+//!
+//! JSON-RPC types are re-exported from `cellmembrane-types` (canonical source).
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 use crate::capability_discovery::{Capability, PrimalEndpoint, PrimalEndpoints, PrimalHealth};
 
-/// JSON-RPC request
-#[derive(Serialize)]
-pub struct JsonRpcRequest {
-    pub jsonrpc: String,
-    pub method: String,
-    pub params: Value,
-    pub id: u64,
-}
-
-/// JSON-RPC response (jsonrpc and id required for spec compliance, not read after parse)
-#[derive(Deserialize)]
-pub struct JsonRpcResponse {
-    #[expect(dead_code, reason = "Required by JSON-RPC spec for deserialization")]
-    pub jsonrpc: String,
-    pub result: Option<Value>,
-    pub error: Option<JsonRpcError>,
-    #[expect(dead_code, reason = "Required by JSON-RPC spec for deserialization")]
-    pub id: u64,
-}
-
-#[derive(Deserialize)]
-pub struct JsonRpcError {
-    pub message: String,
-}
+// Canonical JSON-RPC 2.0 types from cellmembrane-types
+pub use cellmembrane_types::{JsonRpcRequest, JsonRpcResponse};
+// JsonRpcError is accessed transitively via JsonRpcResponse.error field
 
 /// biomeOS primal format (from Neural API)
 #[derive(Deserialize)]

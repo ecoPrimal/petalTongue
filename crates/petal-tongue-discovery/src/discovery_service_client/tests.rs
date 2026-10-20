@@ -283,6 +283,7 @@ fn test_jsonrpc_error_serialization() {
     let err = JsonRpcError {
         code: -32600,
         message: "Invalid request".to_string(),
+        data: None,
     };
     let json = serde_json::to_string(&err).expect("serialize");
     assert!(json.contains("-32600"));

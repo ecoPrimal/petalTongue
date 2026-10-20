@@ -185,7 +185,7 @@ fn test_jsonrpc_request_serialization() {
 
 #[test]
 fn test_jsonrpc_response_error_parsing() {
-    let json = r#"{"jsonrpc":"2.0","error":{"message":"capability not found"},"id":1}"#;
+    let json = r#"{"jsonrpc":"2.0","error":{"code":-32601,"message":"capability not found"},"id":1}"#;
     let response: JsonRpcResponse = serde_json::from_str(json).unwrap();
     assert!(response.error.is_some());
     assert!(

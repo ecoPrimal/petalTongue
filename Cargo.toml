@@ -59,6 +59,9 @@ keywords = ["visualization", "ecosystem", "ipc", "json-rpc", "pure-rust"]
 categories = ["visualization", "gui", "command-line-interface"]
 
 [workspace.dependencies]
+# Canonical ecosystem types (health, jsonrpc, service, discovery, security)
+cellmembrane-types = { path = "../../gardens/cellMembrane/crates/cellmembrane-types" }
+
 # Async runtime
 tokio = { version = "1.40", features = ["rt-multi-thread", "net", "io-util", "sync", "signal", "time", "fs", "macros"] }
 

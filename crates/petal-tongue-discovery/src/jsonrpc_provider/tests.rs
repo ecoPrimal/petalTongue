@@ -10,7 +10,7 @@ use tokio::net::{UnixListener, UnixStream};
 use crate::traits::VisualizationDataProvider;
 
 use super::JsonRpcProvider;
-use super::types::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
+use super::types::{JsonRpcRequest, JsonRpcResponse};
 
 async fn create_mock_server(socket_path: &str) -> anyhow::Result<tokio::task::JoinHandle<()>> {
     let _ = std::fs::remove_file(socket_path);
@@ -35,10 +35,11 @@ async fn handle_mock_connection(stream: UnixStream) {
 
     while reader.read_line(&mut line).await.is_ok() && !line.is_empty() {
         if let Ok(request) = serde_json::from_str::<JsonRpcRequest>(&line) {
+            let req_id = request.id.unwrap_or(serde_json::Value::Null);
             let response = match request.method.as_str() {
-                "primal.list" => JsonRpcResponse {
-                    jsonrpc: "2.0".to_string(),
-                    result: Some(serde_json::json!([
+                "primal.list" => JsonRpcResponse::success(
+                    req_id,
+                    serde_json::json!([
                         {
                             "id": "test-primal",
                             "name": "Test Primal",
@@ -48,26 +49,12 @@ async fn handle_mock_connection(stream: UnixStream) {
                             "health": "Healthy",
                             "last_seen": 0
                         }
-                    ])),
-                    error: None,
-                    id: request.id,
-                },
-                "topology.get" | "get_topology" => JsonRpcResponse {
-                    jsonrpc: "2.0".to_string(),
-                    result: Some(serde_json::json!([])),
-                    error: None,
-                    id: request.id,
-                },
-                _ => JsonRpcResponse {
-                    jsonrpc: "2.0".to_string(),
-                    result: None,
-                    error: Some(JsonRpcError {
-                        code: -32601,
-                        message: "Method not found".to_string(),
-                        data: None,
-                    }),
-                    id: request.id,
-                },
+                    ]),
+                ),
+                "topology.get" | "get_topology" => {
+                    JsonRpcResponse::success(req_id, serde_json::json!([]))
+                }
+                _ => JsonRpcResponse::error(req_id, -32601, "Method not found"),
             };
 
             let response_json = serde_json::to_string(&response).unwrap() + "\n";
@@ -81,12 +68,7 @@ async fn handle_mock_connection(stream: UnixStream) {
 
 #[tokio::test]
 async fn test_jsonrpc_request_serialization() {
-    let request = JsonRpcRequest {
-        jsonrpc: "2.0".to_string(),
-        method: "primal.list".to_string(),
-        params: None,
-        id: 1,
-    };
+    let request = JsonRpcRequest::new("primal.list", None, 1);
 
     let json = serde_json::to_string(&request).unwrap();
     assert!(json.contains("\"jsonrpc\":\"2.0\""));
@@ -99,7 +81,7 @@ async fn test_jsonrpc_response_deserialization() {
     let json = r#"{"jsonrpc":"2.0","result":[],"id":1}"#;
     let response: JsonRpcResponse = serde_json::from_str(json).unwrap();
     assert_eq!(response.jsonrpc, "2.0");
-    assert_eq!(response.id, 1);
+    assert_eq!(response.id, serde_json::json!(1));
     assert!(response.error.is_none());
 }
 
@@ -258,16 +240,14 @@ async fn create_jsonrpc_error_server(
                 if reader.read_line(&mut line).await.is_ok()
                     && let Ok(request) = serde_json::from_str::<JsonRpcRequest>(&line)
                 {
-                    let response = JsonRpcResponse {
-                        jsonrpc: "2.0".to_string(),
-                        result: None,
-                        error: Some(JsonRpcError {
-                            code: -32600,
-                            message: "Invalid request".to_string(),
-                            data: Some(serde_json::json!("extra")),
-                        }),
-                        id: request.id,
-                    };
+                    let mut response = JsonRpcResponse::error(
+                        request.id.unwrap_or(serde_json::Value::Null),
+                        -32600,
+                        "Invalid request",
+                    );
+                    if let Some(ref mut err) = response.error {
+                        err.data = Some(serde_json::json!("extra"));
+                    }
                     let response_json = serde_json::to_string(&response).unwrap() + "\n";
                     let _ = writer.write_all(response_json.as_bytes()).await;
                     let _ = writer.flush().await;
@@ -290,12 +270,10 @@ async fn create_wrong_id_server(socket_path: &str) -> anyhow::Result<tokio::task
                 let mut reader = tokio::io::BufReader::new(reader);
                 let mut line = String::new();
                 if reader.read_line(&mut line).await.is_ok() {
-                    let response = JsonRpcResponse {
-                        jsonrpc: "2.0".to_string(),
-                        result: Some(serde_json::json!([])),
-                        error: None,
-                        id: 9999, // Wrong ID
-                    };
+                    let response = JsonRpcResponse::success(
+                        serde_json::json!(9999), // Wrong ID
+                        serde_json::json!([]),
+                    );
                     let response_json = serde_json::to_string(&response).unwrap() + "\n";
                     let _ = writer.write_all(response_json.as_bytes()).await;
                     let _ = writer.flush().await;
@@ -329,31 +307,18 @@ async fn handle_topology_fallback_connection(stream: UnixStream) {
 
     while reader.read_line(&mut line).await.is_ok() && !line.is_empty() {
         if let Ok(request) = serde_json::from_str::<JsonRpcRequest>(&line) {
+            let req_id = request.id.unwrap_or(serde_json::Value::Null);
             let response = match request.method.as_str() {
-                "primal.list" => JsonRpcResponse {
-                    jsonrpc: "2.0".to_string(),
-                    result: Some(serde_json::json!([])),
-                    error: None,
-                    id: request.id,
-                },
-                "get_topology" => JsonRpcResponse {
-                    jsonrpc: "2.0".to_string(),
-                    result: Some(serde_json::json!([
+                "primal.list" => JsonRpcResponse::success(req_id, serde_json::json!([])),
+                "get_topology" => JsonRpcResponse::success(
+                    req_id,
+                    serde_json::json!([
                         {"from": "a", "to": "b", "edge_type": "test"}
-                    ])),
-                    error: None,
-                    id: request.id,
-                },
-                "topology.get" | _ => JsonRpcResponse {
-                    jsonrpc: "2.0".to_string(),
-                    result: None,
-                    error: Some(JsonRpcError {
-                        code: -32601,
-                        message: "Method not found".to_string(),
-                        data: None,
-                    }),
-                    id: request.id,
-                },
+                    ]),
+                ),
+                "topology.get" | _ => {
+                    JsonRpcResponse::error(req_id, -32601, "Method not found")
+                }
             };
             let response_json = serde_json::to_string(&response).unwrap() + "\n";
             let _ = writer.write_all(response_json.as_bytes()).await;

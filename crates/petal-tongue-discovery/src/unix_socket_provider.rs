@@ -10,36 +10,18 @@
 //! - Non-blocking directory traversal
 //! - Aggressive timeouts to prevent hanging on unresponsive sockets
 
+use cellmembrane_types::JsonRpcResponse;
 use crate::capability_parse;
 use crate::errors::{DiscoveryError, DiscoveryResult};
 use futures_util::future::join_all;
 use petal_tongue_core::transport::{TransportEndpoint, connect_transport};
 use petal_tongue_core::types::{PrimalHealthStatus, PrimalInfo};
-use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tracing::{debug, info, warn};
-
-/// JSON-RPC 2.0 error
-#[derive(Debug, Deserialize, Serialize)]
-struct JsonRpcError {
-    code: i32,
-    message: String,
-}
-
-/// JSON-RPC 2.0 response
-#[derive(Debug, Deserialize, Serialize)]
-struct JsonRpcResponse {
-    jsonrpc: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    result: Option<Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    error: Option<JsonRpcError>,
-    id: Value,
-}
 
 /// Unix socket discovery provider
 ///
